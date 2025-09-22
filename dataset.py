@@ -9,24 +9,24 @@ from torchvision.io import decode_image
 import nibabel as nib
 import matplotlib.pyplot as plt
 
-class TrainDataset(Dataset):
-    def __init__(self, csv_file, img_dir): # transform=None, target_transform=None):
-        self.img_labels = pd.read_csv(csv_file) #csv file innehåller img name flr hr lr
-        self.img_dir = img_dir
 
+class TrainDataset(Dataset):
+    def __init__(self, input_patches1, input_patches2, output_patches): # transform=None, target_transform=None):
+        self.input_patches1 = input_patches1
+        self.input_patches2 = input_patches2
+        self.output_patches = output_patches
 
     def __len__(self):
-        return len(self.img_labels)
-    
-    def __getitem__(self, idx):
-        HR_img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        LR_img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 1])
+        return len(self.output_patches)
 
-        HR_img = nib.load(str(HR_img_path)).get_fdata()
-        LR_img = nib.load(str(LR_img_path)).get_fdata()
+    def __getitem__(self, idx):
+        input_patch1 = self.input_patches1[idx]
+        input_patch2 = self.input_patches2[idx]
+        output_patch = self.output_patches[idx]
 
         # Optionally, convert to torch tensors
-        HR_img = torch.from_numpy(HR_img).float()
-        LR_img = torch.from_numpy(LR_img).float()
+        input_patch1 = torch.from_numpy(input_patch1).float()
+        input_patch2 = torch.from_numpy(input_patch2).float()
+        output_patch = torch.from_numpy(output_patch).float()
 
-        return HR_img, LR_img
+        return input_patch1, input_patch2, output_patch
