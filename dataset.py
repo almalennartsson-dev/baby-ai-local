@@ -11,22 +11,22 @@ import matplotlib.pyplot as plt
 
 
 class TrainDataset(Dataset):
-    def __init__(self, input_patches1, input_patches2, output_patches): # transform=None, target_transform=None):
-        self.input_patches1 = input_patches1
-        self.input_patches2 = input_patches2
-        self.output_patches = output_patches
+    def __init__(self, input1, input2, output): # transform=None, target_transform=None):
+        self.input1 = input1
+        self.input2 = input2
+        self.output = output
 
     def __len__(self):
-        return len(self.output_patches)
+        return len(self.output)
 
     def __getitem__(self, idx):
-        input_patch1 = self.input_patches1[idx]
-        input_patch2 = self.input_patches2[idx]
-        output_patch = self.output_patches[idx]
+        input1 = self.input1[idx]
+        input2 = self.input2[idx]
+        output = self.output[idx]
 
         # Optionally, convert to torch tensors
-        input_patch1 = torch.from_numpy(input_patch1).float()
-        input_patch2 = torch.from_numpy(input_patch2).float()
-        output_patch = torch.from_numpy(output_patch).float()
+        input1 = torch.from_numpy(input1).float()
+        input2 = torch.from_numpy(input2).float()
+        output = torch.from_numpy(output).float()
 
-        return input_patch1, input_patch2, output_patch
+        return input1, input2, output
