@@ -219,6 +219,10 @@ def get_patches(files, patch_size, stride, target_shape, ref_img):
         t1_img = pad_to_shape(t1_img, target_shape)
         t2_img = pad_to_shape(t2_img, target_shape)
         t2_LR_img = pad_to_shape(t2_LR_img, target_shape)
+        #normalizing
+        t1_img = normalize(t1_img)
+        t2_img = normalize(t2_img)
+        t2_LR_img = normalize(t2_LR_img)
         #extracting patches
         t1_patches = extract_3D_patches(t1_img.get_fdata(), patch_size, stride)
         t2_patches = extract_3D_patches(t2_img.get_fdata(), patch_size, stride)
@@ -229,3 +233,49 @@ def get_patches(files, patch_size, stride, target_shape, ref_img):
         t2_LR_input.append(t2_LR_patches)
     
     return t1_input, t2_output, t2_LR_input
+
+def min_max_normalize(img): # verkar inte göra skillnad vilken normalisering
+    """
+    Normalizes a numpy array to the range [0, 1] using min-max normalization.
+    
+    Parameters:
+    img (numpy array): The input image to be normalized.
+    
+    Returns:
+    numpy array: The normalized image.
+    """
+    # set all negative values to zero
+    img[img < 0] = 0
+
+
+    min_val = np.min(img)
+    max_val = np.max(img)
+    
+    if max_val - min_val == 0:
+        return img - min_val  # Return zero array if all values are the same
+    
+    normalized_img = (img - min_val) / (max_val - min_val)
+    return normalized_img
+
+def normalize(img):
+
+    """ Normalizes a NIfTI image to the range [0, 1] using the 1st and 99th percentiles.    
+    Parameters:
+    img (nibabel NIfTI image): The input NIfTI image to be normalized.
+
+    Returns:
+    nibabel NIfTI image: The normalized NIfTI image.
+    """
+
+    I = img.get_fdata()
+    mask = I > 0  # Create a mask for non-zero values
+
+    low_p, high_p = 1, 99
+    min_val = np.percentile(I[mask], low_p)
+    max_val = np.percentile(I[mask], high_p)
+
+    eps = 1e-6  # Small epsilon to avoid division by zero
+    normalized_img = (I - min_val) / (max_val - min_val + eps)
+    normalized_img = np.clip(normalized_img, 0, 1)  # Clip values to [0, 1]
+
+    return nib.Nifti1Image(normalized_img, affine=img.affine)

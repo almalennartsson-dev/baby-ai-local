@@ -1,9 +1,11 @@
 
-import os
+import os, csv
+from pathlib import Path
 import random
 import numpy as np
 from scipy.ndimage import zoom
 import nibabel as nib
+import pandas as pd
 
 def save_images(file_list, output_dir):
     """
@@ -23,20 +25,15 @@ def save_images(file_list, output_dir):
         save_path = os.path.join(output_dir, base_name)
         nib.save(nib.Nifti1Image(img_data, img.affine), save_path)
 
-def extract_and_save_patches(img, patch_size, stride, output_dir, base_name):
-    """ Extracts 3D patches from a 3D image and saves them as NIfTI files.
-
-    Parameters:
-    - img: The input 3D image (as a numpy array).
-    - patch_size: The size of each patch (depth, height, width).
-    - stride: The stride for patch extraction (depth_stride, height_stride, width_stride).
-    - output_dir: Directory where patches will be saved.
-    - base_name: Base name for the saved patch files.
+def append_row(csv_path, row_dict):
     """
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    Appends a row to a CSV file. If the file does not exist, it creates it and adds headers.
     
-    patches = extract_3D_patches(img, patch_size, stride)
-    save
+    Parameters:
+    csv_path (str): Path to the CSV file.
+    row_dict (dict): Dictionary representing the row to append, where keys are column names.
+    """
     
-    
+    df = pd.DataFrame([row_dict])
+    header = not os.path.exists(csv_path)
+    df.to_csv(csv_path, mode="a", index=False, header=header)
