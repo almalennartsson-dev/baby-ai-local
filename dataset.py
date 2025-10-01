@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 
 class TrainDataset(Dataset):
     def __init__(self, input1, input2, output): # transform=None, target_transform=None):
-        self.input1 = input1
-        self.input2 = input2
-        self.output = output
+        self.input1 = [patch for img_patches in input1 for patch in img_patches]
+        self.input2 = [patch for img_patches in input2 for patch in img_patches]
+        self.output = [patch for img_patches in output for patch in img_patches]
 
     def __len__(self):
         return len(self.output)
@@ -24,7 +24,6 @@ class TrainDataset(Dataset):
         input2 = self.input2[idx]
         output = self.output[idx]
 
-        # Optionally, convert to torch tensors
         input1 = torch.from_numpy(input1).float()
         input2 = torch.from_numpy(input2).float()
         output = torch.from_numpy(output).float()
