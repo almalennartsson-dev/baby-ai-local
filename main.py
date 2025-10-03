@@ -55,6 +55,7 @@ net = UNet(
 )
 
 loss_fn = nn.MSELoss()
+loss_list = []
 optimizer = optim.Adam(net.parameters(), lr=1e-4)
 num_epochs = 10
 use_cuda = torch.cuda.is_available()
@@ -79,6 +80,8 @@ for epoch in range(num_epochs):
         running_loss += loss.item() * inputs.size(0)
 
     epoch_loss = running_loss / len(train_loader.dataset)
+    loss_list.append(epoch_loss)
+
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}")
 
 #VALIDATION
@@ -104,8 +107,10 @@ with torch.no_grad():
 metrics = calculate_metrics(generated_images, real_images)
 
 # SAVE RESULTS
+timestamp = datetime.datetime.now().isoformat()
+
 row_dict = {
-    "timestamp": datetime.datetime.now().isoformat(),
+    "timestamp": timestamp,
     "train_size": len(train),
     "val_size": len(val),
     "test_size": len(test),
@@ -130,8 +135,13 @@ row_dict = {
     "nrmse": metrics["nrmse"],
     "mse": metrics["mse"],
     "loss_fn": "MSELoss",
+    "loss_list": loss_list,
     "optimizer": "Adam",
-    "notes": "berzelius first test",
+    "notes": "Initial test run",
+    "masking": "None",
+    "weights": f"{timestamp}_model_weights.pth",
+
 }
 
-append_row(DATA_DIR / "results.csv", row_dict) #cluster?
+torch.save(net.state_dict(), DATA_DIR / "outputs" / f"{timestamp}_model_weights.pth") 
+append_row(DATA_DIR / "outputs" / "results.csv", row_dict)
