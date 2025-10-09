@@ -5,7 +5,7 @@
 #SBATCH -J train_unet
 
 module load Miniforge3/24.7.1-2-hpc1-bdist
-mamba activate pytorch-2.5.0-python-3.10
+mamba activate /proj/synthetic_alzheimer/users/x_almle/.venvs/mri-sr-bob
 
 python main.py
 

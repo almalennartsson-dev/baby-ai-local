@@ -12,8 +12,8 @@ import datetime
 from evaluations import calculate_metrics 
 
 #Collect all data files
-#DATA_DIR = pathlib.Path.home()/"data"/"bobsrepository" #cluster?
-DATA_DIR = pathlib.Path("/proj/synthetic_alzheimer/users/x_almle/bobsrepository") #cluster?
+DATA_DIR = pathlib.Path.home()/"data"/"bobsrepository" #cluster?
+#DATA_DIR = pathlib.Path("/proj/synthetic_alzheimer/users/x_almle/bobsrepository") #cluster?
 assert DATA_DIR.exists(), f"DATA_DIR not found: {DATA_DIR}"
 t1_files = sorted(DATA_DIR.rglob("*T1w.nii.gz"))
 t2_files = sorted(DATA_DIR.rglob("*T2w.nii.gz"))
@@ -43,7 +43,7 @@ batch_size = 2
 
 train_dataset = TrainDataset(train_t1, train_t2_LR, train_t2)
 train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-
+print(f"Number of training batches: {len(train_loader)}")
 net = UNet(
     spatial_dims=3,
     in_channels=2,
@@ -53,25 +53,28 @@ net = UNet(
     num_res_units=2,
     norm=None,
 )
-
+print("Network initialized")
 loss_fn = nn.MSELoss()
 loss_list = []
 optimizer = optim.Adam(net.parameters(), lr=1e-4)
-num_epochs = 10
+num_epochs = 2
 use_cuda = torch.cuda.is_available()
+print(f"Using CUDA: {use_cuda}")
 device = torch.device("cuda" if use_cuda else "cpu")
 #device = torch.device("cpu") #cluster?
-net.to(device)
+net.to(device, dtype=torch.float32)
 
+print("Starting training...")
 for epoch in range(num_epochs):
     net.train()
     running_loss = 0.0
     for batch in train_loader:
         input1, input2, target = batch
-        inputs = torch.stack([input1, input2], dim=1).float().to(device)  # (B, 2, 64, 64, 64)
-        target = target.unsqueeze(1).float().to(device)  # (B, 1, 64, 64, 64)
+        inputs = torch.stack([input1, input2], dim=1).to(device, dtype=torch.float32, non_blocking=True)  # (B, 2, 64, 64, 64)
+        target = target.unsqueeze(1).to(device, dtype=torch.float32, non_blocking=True)  # (B, 1, 64, 64, 64)
 
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
+        print("computing outputs...")
         outputs = net(inputs)
         loss = loss_fn(outputs, target)
         loss.backward()
@@ -143,5 +146,7 @@ row_dict = {
 
 }
 
+#create outputs directory if it doesn't exist
+(DATA_DIR / "outputs").mkdir(parents=True, exist_ok=True)
 torch.save(net.state_dict(), DATA_DIR / "outputs" / f"{timestamp}_model_weights.pth") 
 append_row(DATA_DIR / "outputs" / "results.csv", row_dict)

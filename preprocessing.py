@@ -1,4 +1,3 @@
-import random
 import numpy as np
 import torch
 from torch import nn
@@ -24,11 +23,11 @@ def split_dataset(file_list, train_ratio=(0.7, 0.15, 0.15)):
     Returns:
     - train_files: List of training file paths.
     - val_files: List of validation file paths.
+    - test_files: List of test file paths.
     """
     train, val, test = train_ratio
     
-    print(len(file_list))
-    random.shuffle(file_list)
+    #random.shuffle(file_list)
     train_split = int(len(file_list) * train)
     val_split = int(len(file_list) * (train + val))
     train_files = file_list[:train_split]
