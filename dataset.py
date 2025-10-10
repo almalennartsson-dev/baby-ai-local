@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 
 class TrainDataset(Dataset):
-    def __init__(self, input1, input2, output): # transform=None, target_transform=None):
+    def __init__(self, input1, input2, output): 
         self.input1 = [patch for img_patches in input1 for patch in img_patches]
         self.input2 = [patch for img_patches in input2 for patch in img_patches]
         self.output = [patch for img_patches in output for patch in img_patches]
