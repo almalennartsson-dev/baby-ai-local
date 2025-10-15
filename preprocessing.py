@@ -12,6 +12,7 @@ from nibabel import processing
 import matplotlib.pyplot as plt
 import scipy.ndimage
 from scipy.ndimage import zoom
+from skimage.transform import resize
 
 def split_dataset(file_list, train_ratio=(0.7, 0.15, 0.15)):
     """
@@ -54,6 +55,30 @@ def create_LR_img(img, scale_factor):
 
     # Upsample with interpolation
     up_img = zoom(down_img, zoom_factors, order=3)  # order=3: cubic interpolation
+
+    return up_img
+
+def create_LR_img_simple(img, scale_factor):
+    """
+    Downsamples a 3D image by the given scale factor. Interpolates to match original shape.
+    
+    Parameters:
+    img (numpy array): The input 3D image to be LR.
+    scale_factor (int): The factor by which to downsample the image.
+    
+    Returns:
+    numpy array: The LR 3D image.
+    """
+
+    down_img = img[:, :, ::scale_factor]
+
+    #upsample to original shape by filling in gaps
+    up_img = np.zeros(img.shape)
+    up_img[:, :, ::scale_factor] = down_img
+    for i in range(up_img.shape[2]-1):
+        if i % scale_factor != 0:
+            up_img[:, :, i] = (up_img[:, :, i - (i % scale_factor)] + up_img[:, :, i + (scale_factor - (i % scale_factor))]) / 2
+        
 
     return up_img
 
