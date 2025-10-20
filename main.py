@@ -1,6 +1,7 @@
 import pathlib
 import nibabel as nib
-from monai.networks.nets import UNet
+#from monai.networks.nets import UNet
+from unet import UNet
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,8 +14,8 @@ from evaluations import calculate_metrics
 
 print("Start at:", datetime.datetime.now().isoformat())
 #Collect all data files
-#DATA_DIR = pathlib.Path.home()/"data"/"bobsrepository" #cluster?
-DATA_DIR = pathlib.Path("/proj/synthetic_alzheimer/users/x_almle/bobsrepository") #cluster?
+DATA_DIR = pathlib.Path.home()/"data"/"bobsrepository" #cluster?
+#DATA_DIR = pathlib.Path("/proj/synthetic_alzheimer/users/x_almle/bobsrepository") #cluster?
 assert DATA_DIR.exists(), f"DATA_DIR not found: {DATA_DIR}"
 t1_files = sorted(DATA_DIR.rglob("*T1w.nii.gz"))
 t2_files = sorted(DATA_DIR.rglob("*T2w.nii.gz"))
@@ -61,7 +62,7 @@ loss_fn = nn.MSELoss()
 loss_list = []
 val_loss_list = []
 optimizer = optim.Adam(net.parameters(), lr=1e-4)
-num_epochs = 50
+num_epochs = 2
 print(f"Number of epochs: {num_epochs}")
 
 #use_cuda = torch.cuda.is_available()
@@ -174,7 +175,7 @@ row_dict = {
     "net channels": (16, 32, 64, 128, 256),
     "net strides": (2, 2, 2, 2),
     "net num_res_units": 2,
-    "net norm": None,
+    "net norm": "Group norm (8 groups)",
     "num_epochs": num_epochs,
     "batch_size": batch_size,
     "learning_rate": optimizer.param_groups[0]['lr'],
@@ -186,7 +187,7 @@ row_dict = {
     "loss_fn": "MSELoss",
     "loss_list": loss_list,
     "optimizer": "Adam",
-    "notes": "introduce val loss tracking",
+    "notes": "adaDM residual units",
     "masking": "None",
     "weights": f"{timestamp}_model_weights.pth",
     "val_loss_list": val_loss_list,
