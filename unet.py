@@ -259,21 +259,54 @@ class UNet(nn.Module):
             is_top: True if this is the top block.
         """
         conv: Convolution | nn.Sequential
-
-        conv = Convolution(
+        if is_top: #remove norm in last layer
+            conv = Convolution(
             self.dimensions,
             in_channels,
             out_channels,
             strides=strides,
             kernel_size=self.up_kernel_size,
             act=self.act,
-            norm=self.norm,
+            norm=None,
             dropout=self.dropout,
             bias=self.bias,
             conv_only=is_top and self.num_res_units == 0,
             is_transposed=True,
             adn_ordering=self.adn_ordering,
-        )
+            )
+
+            if self.num_res_units > 0:
+                ru = ResidualUnitAdaDM(
+                    self.dimensions,
+                    out_channels,
+                    out_channels,
+                    strides=1,
+                    kernel_size=self.kernel_size,
+                    subunits=1,
+                    act=self.act,
+                    norm=None,
+                    dropout=self.dropout,
+                    bias=self.bias,
+                    last_conv_only=is_top,
+                    adn_ordering=self.adn_ordering,
+                )
+            conv = nn.Sequential(conv, ru)
+        
+        else:
+            conv = Convolution(
+                self.dimensions,
+                in_channels,
+                out_channels,
+                strides=strides,
+                kernel_size=self.up_kernel_size,
+                act=self.act,
+                norm=self.norm,
+                dropout=self.dropout,
+                bias=self.bias,
+                conv_only=is_top and self.num_res_units == 0,
+                is_transposed=True,
+                adn_ordering=self.adn_ordering,
+            )
 
         if self.num_res_units > 0:
             ru = ResidualUnitAdaDM(

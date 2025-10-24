@@ -11,6 +11,7 @@ from preprocessing import create_and_save_LR_imgs, reconstruct_from_patches, spl
 from file_structure import append_row
 import datetime
 from evaluations import calculate_metrics 
+#from monai.losses.perceptual import MedicalNetPerceptualSimilarity, PerceptualLoss
 
 print("Start at:", datetime.datetime.now().isoformat())
 #Collect all data files
@@ -59,10 +60,15 @@ net = UNet(
 )
 print("Network initialized")
 loss_fn = nn.MSELoss()
+#lpips_loss = PerceptualLoss(
+ #   spatial_dims=3,
+  #  network_type="medicalnet_resnet10_23datasets",
+   # is_fake_3d=False,
+#)
 loss_list = []
 val_loss_list = []
 optimizer = optim.Adam(net.parameters(), lr=1e-4)
-num_epochs = 2
+num_epochs = 50
 print(f"Number of epochs: {num_epochs}")
 
 #use_cuda = torch.cuda.is_available()
@@ -121,7 +127,7 @@ for epoch in range(num_epochs):
     epoch_val_loss = val_loss / len(val_loader.dataset)
     val_loss_list.append(epoch_val_loss)
 
-    #save the best model based on validation loss. KEEP THIS OR NOT?
+    #save the best model based on validation loss.
     if epoch_val_loss < best_val_loss:
         best_val_loss = epoch_val_loss
         torch.save(net.state_dict(), DATA_DIR / "outputs" / f"{timestamp}_model_weights.pth")
@@ -138,7 +144,7 @@ for epoch in range(num_epochs):
 generated_images = []
 real_images = []
 
-net.eval() # could be not the best model, but the last one. FIX THIS!
+net.eval()
 with torch.no_grad():
     for i in range(len(test_t1)):
         all_outputs = []
