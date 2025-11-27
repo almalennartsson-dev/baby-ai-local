@@ -18,8 +18,9 @@ batch_size = 2
 patch_size = (32, 32, 32)
 stride = (16, 16, 16)
 target_shape = (192, 224, 192) 
-num_epochs = 50
+num_epochs = 20
 timestamp = datetime.datetime.now().isoformat()
+lambda_adv = 0.01  # Weight for adversarial loss
 
 # Smart GPU/CPU detection
 import os
@@ -42,15 +43,14 @@ G = UNet(
 
 D = PatchDiscriminator(
     spatial_dims=3,
-    num_channels=4,
+    num_channels=32,
     in_channels=3,
     out_channels=1,
 )
 
 # Define Loss Functions and Optimizers
-d_loss = PatchAdversarialLoss() #andra parametrar?
-g_loss = nn.MSELoss()
-pixel_loss = nn.L1Loss()
+adv_loss = PatchAdversarialLoss(criterion="bce") #andra parametrar?
+pix_loss = nn.L1Loss()
 
 g_optimizer = optim.Adam(G.parameters(), lr=1e-4) #add betas?
 d_optimizer = optim.Adam(D.parameters(), lr=1e-4)
@@ -79,45 +79,54 @@ val_loader = DataLoader(TrainDataset(val_t1, val_t2_LR, val_t2), batch_size, shu
 G.to(device, dtype=torch.float32)
 D.to(device, dtype=torch.float32)
 
-for epoch in range(5):
+for epoch in range(num_epochs):
     G.train()
     D.train()
+
     for batch in train_loader:
         input1, input2, target = batch
+
+        
         inputs = torch.stack([input1, input2], dim=1).to(device, dtype=torch.float32, non_blocking=True)  # (B, 2, 32, 32, 32)
         target = target.unsqueeze(1).to(device, dtype=torch.float32, non_blocking=True)  # (B, 1, 32, 32, 32)  
         
-        # Train generator
-
-        g_optimizer.zero_grad()
-
-        #GAN loss
+        #Generate fake image
         fake_output = G(inputs)
-        fake_pair = torch.cat([inputs, fake_output], dim=1)  # (B, 3, 32, 32, 32)
-        pred_fake = D(fake_pair)
-        loss_adv = d_loss(pred_fake[-1], target_is_real=True, for_discriminator=False) #förstår inte det här steget
+
+        real_pair = torch.cat([inputs, target], dim=1)  # (B, 3, 32, 32, 32)
+        fake_pair = torch.cat([inputs, fake_output.detach()], dim=1)  # (B, 3, 32, 32, 32)
         
-        #Pixel loss
-        loss_pixel = g_loss(fake_output, target)
-
-        #Total loss
-        loss_G = loss_adv + loss_pixel
-        loss_G.backward()
-        g_optimizer.step()
-
-        #Train discriminator
-
+        #DISCRIMINATOR TRAINING
         d_optimizer.zero_grad()
-        pred_real = D(torch.cat([inputs, target], dim=1))
-        loss_real = d_loss(pred_real[-1], target_is_real=True, for_discriminator=True)
+        pred_real = D(real_pair)
+        loss_real = adv_loss(pred_real[-1], target_is_real=True, for_discriminator=True)
 
-        pred_fake = D(torch.cat([inputs, fake_output.detach()], dim=1))
-        loss_fake = d_loss(pred_fake[-1], target_is_real=False, for_discriminator=True)
+        pred_fake = D(fake_pair)
+        loss_fake = adv_loss(pred_fake[-1], target_is_real=False, for_discriminator=True)
 
         #Total loss
         loss_D = (loss_real + loss_fake) * 0.5
         loss_D.backward()
         d_optimizer.step()
+
+
+        #GENERATOR TRAINING
+
+        fake_pair = torch.cat([inputs, fake_output], dim=1)  # (B, 3, 32, 32, 32)
+        pred_fake = D(fake_pair)
+        
+        g_optimizer.zero_grad()
+
+        g_adv = adv_loss(pred_fake[-1], target_is_real=True, for_discriminator=False) #förstår inte det här steget
+        g_pix = pix_loss(fake_output, target)
+        
+        #Total loss
+        loss_G = g_pix + lambda_adv * g_adv
+        loss_G.backward()
+        g_optimizer.step()
+
+        
+
     print(f"Epoch {epoch+1}/{num_epochs}, Generator Loss: {loss_G.item():.4f}, Discriminator Loss: {loss_D.item():.4f}")
 
 row_dict = {

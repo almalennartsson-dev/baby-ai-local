@@ -13,6 +13,12 @@ import matplotlib.pyplot as plt
 import scipy.ndimage
 from scipy.ndimage import zoom
 from skimage.transform import resize
+import nipype.interfaces.fsl as fsl
+
+import os, shutil
+os.environ["FSLDIR"] = os.path.expanduser("~/fsl")
+os.environ["FSLOUTPUTTYPE"] = "NIFTI_GZ"
+os.environ["PATH"] = os.path.join(os.environ["FSLDIR"], "bin") + os.pathsep + os.environ.get("PATH","")
 
 def split_dataset(file_list, train_ratio=(0.7, 0.15, 0.15)):
     """
@@ -36,7 +42,7 @@ def split_dataset(file_list, train_ratio=(0.7, 0.15, 0.15)):
     test_files = file_list[val_split:]
     return train_files, val_files, test_files
 
-def create_LR_img(img, scale_factor):
+def create_LR_img(img, scale_factor, start_slice=0):
     """
     Downsamples a 3D image by the given scale factor. Interpolates to match original shape.
     
@@ -48,7 +54,7 @@ def create_LR_img(img, scale_factor):
     numpy array: The LR 3D image.
     """
 
-    down_img = img[:, :, ::scale_factor]
+    down_img = img[:, :, start_slice::scale_factor]
     
     # Calculate zoom factors to match original shape
     zoom_factors = np.array(img.shape) / np.array(down_img.shape)
@@ -57,6 +63,30 @@ def create_LR_img(img, scale_factor):
     up_img = zoom(down_img, zoom_factors, order=3)  # order=3: cubic interpolation
 
     return up_img
+
+def create_LR_nifti(img, scale_factor):
+    """
+    Downsamples a 3D NIfTI image by the given scale factor. NO UPSAMPLING
+    
+    Parameters:
+    img (nibabel NIfTI image): The input 3D NIfTI image to be LR.
+    scale_factor (int): The factor by which to downsample the image.
+    
+    Returns:
+    nibabel NIfTI image: The LR 3D NIfTI image.
+    """
+
+    img_data = img.get_fdata()
+    down_img = img_data[:, :, ::scale_factor]
+    
+    #update zooms
+    hdr = img.header.copy()
+    zooms = list(hdr.get_zooms())
+    zooms = (zooms[0], zooms[1], zooms[2] * scale_factor)
+    hdr.set_zooms(zooms)
+
+    lr_nifti = nib.Nifti1Image(down_img, img.affine, hdr)
+    return lr_nifti
 
 def create_LR_img_simple(img, scale_factor):
     """
@@ -112,7 +142,7 @@ def create_and_save_LR_imgs(file_list, scale_factor, output_dir):
 
 def scale_to_reference_img(img, ref_img):
     """
-    Resamples img to match the shape and affine of ref_img using nibabel.
+    Resamples img to match the shape and affine of ref_img using nibabel. WRONG???
     
     Parameters:
     ref_img (nibabel NIfTI image): The reference image with desired shape and affine.
@@ -155,7 +185,7 @@ def extract_3D_patches(img, patch_size, stride):
 
 def pad_to_shape(img, target_shape): 
     """
-    Pads a 3D image to the target shape with zeros. Updates the affine matrix accordingly.
+    Pads a 3D image to the target shape with zeros. Updates the affine matrix accordingly. Shape has to be divisible by patch size.
     
     Parameters:
     img (nibabel NIfTI image): The input 3D image.
@@ -258,6 +288,48 @@ def get_patches(files, patch_size, stride, target_shape, ref_img):
     
     return t1_input, t2_output, t2_LR_input
 
+def get_patches2(files, patch_size, stride, target_shape, ref_img):
+    """
+    Extracts patches from the given files.
+
+    Parameters:
+    - files: List of tuples containing file paths for T1, T2, and T2_LR images.
+    - patch_size: The size of each patch (depth, height, width).
+    - stride: The stride for patch extraction (depth_stride, height_stride, width_stride).
+    - target_shape: The target shape to which images will be padded.
+    - ref_img: The reference image for resampling.
+
+    Returns:
+    list: List of T1 input patches.
+    list: List of T2 output patches.
+    list: List of T2_LR input patches.
+
+    """
+    t1_input = []
+    t2_output = []
+    t2_LR_input = []
+    
+    for t1_file, t2_file, t2_LR_file in files:
+        
+        #padding to be divisible by patch size
+        t1_img = pad_to_shape(t1_img, target_shape)
+        t2_img = pad_to_shape(t2_img, target_shape)
+        t2_LR_img = pad_to_shape(t2_LR_img, target_shape)
+        #normalizing
+        t1_img = normalize(t1_img)
+        t2_img = normalize(t2_img)
+        t2_LR_img = normalize(t2_LR_img)
+        #extracting patches
+        t1_patches = extract_3D_patches(t1_img.get_fdata(), patch_size, stride)
+        t2_patches = extract_3D_patches(t2_img.get_fdata(), patch_size, stride)
+        t2_LR_patches = extract_3D_patches(t2_LR_img.get_fdata(), patch_size, stride)
+        #add patches
+        t1_input.append(t1_patches)
+        t2_output.append(t2_patches)
+        t2_LR_input.append(t2_LR_patches)
+    
+    return t1_input, t2_output, t2_LR_input
+
 def min_max_normalize(img): # verkar inte göra skillnad vilken normalisering
     """
     Normalizes a numpy array to the range [0, 1] using min-max normalization.
@@ -303,3 +375,20 @@ def normalize(img):
     normalized_img = np.clip(normalized_img, 0, 1)  # Clip values to [0, 1]
 
     return nib.Nifti1Image(normalized_img, affine=img.affine)
+
+def apply_FLIRT(img_path, ref_img_path, out_path):
+    """
+    Applies FLIRT affine registration to align img to ref_img.
+
+    Parameters:
+    - img: The input image to be registered.
+    - ref_img: The reference image to which img will be aligned.
+
+    Returns:
+    - The registered image.
+    """
+    flirt = fsl.FLIRT()
+    flirt.inputs.in_file = str(img_path)
+    flirt.inputs.reference = str(ref_img_path)
+    flirt.inputs.out_file = str(out_path)
+    res = flirt.run()

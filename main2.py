@@ -12,36 +12,24 @@ from file_structure import append_row
 import datetime
 from evaluations import calculate_metrics 
 from monai.losses.perceptual import PerceptualLoss
-import random
 
 print("Start at:", datetime.datetime.now().isoformat())
 #Collect all data files
 DATA_DIR = pathlib.Path.home()/"data"/"bobsrepository" #cluster?
 LR_DIR = DATA_DIR/"LR"
-LR4_DIR = DATA_DIR/"LR4"
 #DATA_DIR = pathlib.Path("/proj/synthetic_alzheimer/users/x_almle/bobsrepository") #cluster?
 assert DATA_DIR.exists(), f"DATA_DIR not found: {DATA_DIR}"
 t1_files = sorted(DATA_DIR.rglob("*T1w.nii.gz"))
 t2_files = sorted(DATA_DIR.rglob("*T2w.nii.gz"))
 t2_LR_files = sorted(LR_DIR.rglob("*T2w_LR.nii.gz"))
-t2_LR4_files = sorted(LR4_DIR.rglob("*T2w_LR4.nii.gz"))
-
 files = list(zip(t1_files, t2_files, t2_LR_files))
-files4 = list(zip(t1_files, t2_files, t2_LR4_files))
+
+print(f"T1 files: {len(t1_files)}, T2 files: {len(t2_files)}, T2 LR files: {len(t2_LR_files)}")
+
+#SPLIT DATASET
 train, val, test = split_dataset(files)
-train4, val4, test4 = split_dataset(files4)
 
-train = train + train4
-val = val + val4
-test = test + test4
 
-print(f"T1 files: {len(t1_files)}, T2 files: {len(t2_files)}, T2 LR files: {len(t2_LR_files)}, T2 LR4 files: {len(t2_LR4_files)}")
-print(f"Train size: {len(train)}, Val size: {len(val)}, Test size: {len(test)}")
-
-#SHUFFLE DATA
-random.shuffle(train)
-random.shuffle(val)
-random.shuffle(test)
 #EXTRACT PATCHES
 
 patch_size = (32, 32, 32)
@@ -73,7 +61,12 @@ net = UNet(
 )
 print("Network initialized")
 loss_fn = nn.MSELoss()
-
+lpips_loss = PerceptualLoss(
+    spatial_dims=3,
+    network_type="medicalnet_resnet10_23datasets",
+    is_fake_3d=False,   
+)
+w_lpips = 1.0
 print("Loss functions initialized")
 loss_list = []
 val_loss_list = []
@@ -113,7 +106,9 @@ for epoch in range(num_epochs):
 
         optimizer.zero_grad(set_to_none=True)
         outputs = net(inputs)
-        loss = loss_fn(outputs, target)
+        pix_loss = loss_fn(outputs, target)
+        perc_loss = lpips_loss(outputs, target)
+        loss = pix_loss + w_lpips * perc_loss
         loss.backward()
         optimizer.step()
         train_loss += loss.item() * inputs.size(0)
@@ -203,7 +198,7 @@ row_dict = {
     "loss_fn": "MSELoss",
     "loss_list": loss_list,
     "optimizer": "Adam",
-    "notes": "normal training",
+    "notes": "adaDM residual units",
     "masking": "None",
     "weights": f"{timestamp}_model_weights.pth",
     "val_loss_list": val_loss_list,
