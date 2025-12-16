@@ -14,6 +14,8 @@ import scipy.ndimage
 from scipy.ndimage import zoom
 from skimage.transform import resize
 import nipype.interfaces.fsl as fsl
+import SimpleITK as sitk
+
 
 import os, shutil
 os.environ["FSLDIR"] = os.path.expanduser("~/fsl")
@@ -42,7 +44,7 @@ def split_dataset(file_list, train_ratio=(0.7, 0.15, 0.15)):
     test_files = file_list[val_split:]
     return train_files, val_files, test_files
 
-def create_LR_img(img, scale_factor, start_slice=0):
+def create_LR_img(img, scale_factor, start_slice=0, direction='axial'):
     """
     Downsamples a 3D image by the given scale factor. Interpolates to match original shape.
     
@@ -54,8 +56,13 @@ def create_LR_img(img, scale_factor, start_slice=0):
     numpy array: The LR 3D image.
     """
 
-    down_img = img[:, :, start_slice::scale_factor]
-    
+    if direction == 'axial':
+        down_img = img[:, :, start_slice::scale_factor]
+    elif direction == 'coronal':
+        down_img = img[:, start_slice::scale_factor, :]
+    elif direction == 'sagittal':
+        down_img = img[start_slice::scale_factor, :, :]
+
     # Calculate zoom factors to match original shape
     zoom_factors = np.array(img.shape) / np.array(down_img.shape)
 
@@ -243,7 +250,7 @@ def reconstruct_from_patches(patches, original_shape, stride):
     return reconstructed_img
 
 
-def get_patches(files, patch_size, stride, target_shape, ref_img):
+def get_patches_old(files, patch_size, stride, target_shape, ref_img):
     """
     Extracts patches from the given files.
 
@@ -288,7 +295,7 @@ def get_patches(files, patch_size, stride, target_shape, ref_img):
     
     return t1_input, t2_output, t2_LR_input
 
-def get_patches2(files, patch_size, stride, target_shape, ref_img):
+def get_patches(files, patch_size, stride, target_shape):
     """
     Extracts patches from the given files.
 
@@ -310,7 +317,10 @@ def get_patches2(files, patch_size, stride, target_shape, ref_img):
     t2_LR_input = []
     
     for t1_file, t2_file, t2_LR_file in files:
-        
+        #load images
+        t1_img = nib.load(t1_file)
+        t2_img = nib.load(t2_file)
+        t2_LR_img = nib.load(t2_LR_file)
         #padding to be divisible by patch size
         t1_img = pad_to_shape(t1_img, target_shape)
         t2_img = pad_to_shape(t2_img, target_shape)
