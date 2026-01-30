@@ -1,13 +1,13 @@
 import pathlib
 import nibabel as nib
 #from monai.networks.nets import UNet
-from unet import UNet
+from archived.unet import UNet
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from dataset import TrainDataset, EarlyStopping
-from preprocessing import create_and_save_LR_imgs, reconstruct_from_patches, split_dataset, get_patches
+from functions import create_and_save_LR_imgs, reconstruct_from_patches, split_dataset, get_patches
 from file_structure import append_row
 import datetime
 from evaluations import calculate_metrics 

@@ -1,3 +1,4 @@
+from matplotlib import patches
 import numpy as np
 import torch
 from torch import nn
@@ -15,6 +16,9 @@ from scipy.ndimage import zoom
 from skimage.transform import resize
 import nipype.interfaces.fsl as fsl
 import SimpleITK as sitk
+from skimage.metrics import structural_similarity, peak_signal_noise_ratio, mean_squared_error, normalized_root_mse
+from scipy import stats
+
 
 
 import os, shutil
@@ -340,6 +344,34 @@ def get_patches(files, patch_size, stride, target_shape):
     
     return t1_input, t2_output, t2_LR_input
 
+def get_patches_single_img(file, patch_size, stride, target_shape):
+    """
+    Extracts patches from the given nifti file.
+
+    Parameters:
+    - file: File path for the nifti image.
+    - patch_size: The size of each patch (depth, height, width).
+    - stride: The stride for patch extraction (depth_stride, height_stride, width_stride).
+    - target_shape: The target shape to which images will be padded.
+
+    Returns:
+    list: List of patches
+
+    """    
+    #load images
+    img = nib.load(file)
+    #padding to be divisible by patch size
+    img = pad_to_shape(img, target_shape)
+    #normalizing
+    img = normalize(img)
+    #extracting patches
+    patches = extract_3D_patches(img.get_fdata(), patch_size, stride)
+    #add patches
+    
+    return patches
+
+
+
 def min_max_normalize(img): # verkar inte göra skillnad vilken normalisering
     """
     Normalizes a numpy array to the range [0, 1] using min-max normalization.
@@ -402,3 +434,102 @@ def apply_FLIRT(img_path, ref_img_path, out_path):
     flirt.inputs.reference = str(ref_img_path)
     flirt.inputs.out_file = str(out_path)
     res = flirt.run()
+
+def calculate_metrics(real_images, generated_images):
+    """
+    Calculate PSNR, SSIM, NRMSE, and MSE between real and generated images.
+    
+    Parameters:
+    - real_images: List or array of ground truth images.
+    - generated_images: List or array of generated images.
+    
+    Returns:
+    - Dictionary with average PSNR, SSIM, NRMSE, and MSE values
+    """
+    psnr_list = []
+    ssim_list = []
+    nrmse_list = []
+    mse_list = []
+    for i in range(len(generated_images)): #adjust if different lengths
+        p = peak_signal_noise_ratio(real_images[i], generated_images[i], data_range=1)
+        psnr_list.append(p)
+        s = structural_similarity(real_images[i], generated_images[i], data_range=1)
+        ssim_list.append(s)
+        n = normalized_root_mse(real_images[i], generated_images[i])
+        nrmse_list.append(n)
+        m = mean_squared_error(real_images[i], generated_images[i])
+        mse_list.append(m)
+    return {
+        "psnr": np.mean(psnr_list),
+        "ssim": np.mean(ssim_list),
+        "nrmse": np.mean(nrmse_list),
+        "mse": np.mean(mse_list)
+    }
+
+def calculate_CI(real_images, generated_images):
+    """
+    Calculate PSNR, SSIM, NRMSE, and MSE between real and generated images.
+    
+    Parameters:
+    - real_images: List or array of ground truth images.
+    - generated_images: List or array of generated images.
+    
+    Returns:
+    - Dictionary with average PSNR, SSIM, NRMSE, and MSE values
+    """
+    psnr_list = []
+    ssim_list = []
+    nrmse_list = []
+    mse_list = []
+    N = len(generated_images)
+    for i in range(N): #adjust if different lengths
+        p = peak_signal_noise_ratio(real_images[i], generated_images[i], data_range=1)
+        psnr_list.append(p)
+        s = structural_similarity(real_images[i], generated_images[i], data_range=1)
+        ssim_list.append(s)
+        n = normalized_root_mse(real_images[i], generated_images[i])
+        nrmse_list.append(n)
+        m = mean_squared_error(real_images[i], generated_images[i])
+        mse_list.append(m)
+    
+    std = np.std(psnr_list)
+
+    return {
+        "psnr": np.mean(psnr_list),
+        "ssim": np.mean(ssim_list),
+        "nrmse": np.mean(nrmse_list),
+        "mse": np.mean(mse_list),
+        "psnr_std": std,
+        "psnr_list": psnr_list
+    }
+
+def save_images(file_list, output_dir):
+    """
+    Saves images as NIfTI files from the file list to the specified output directory.
+
+    Parameters:
+    - file_list: List of file paths.
+    - output_dir: Directory where images will be saved.
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    for file_path in file_list:
+        img = nib.load(file_path)
+        img_data = img.get_fdata()
+        base_name = os.path.basename(file_path)
+        save_path = os.path.join(output_dir, base_name)
+        nib.save(nib.Nifti1Image(img_data, img.affine), save_path)
+
+def append_row(csv_path, row_dict):
+    """
+    Appends a row to a CSV file. If the file does not exist, it creates it and adds headers.
+    
+    Parameters:
+    csv_path (str): Path to the CSV file.
+    row_dict (dict): Dictionary representing the row to append, where keys are column names.
+    """
+    
+    df = pd.DataFrame([row_dict])
+    header = not os.path.exists(csv_path)
+    df.to_csv(csv_path, mode="a", index=False, header=header)
