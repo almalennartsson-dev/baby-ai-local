@@ -75,98 +75,6 @@ def create_LR_img(img, scale_factor, start_slice=0, direction='axial'):
 
     return up_img
 
-def create_LR_nifti(img, scale_factor):
-    """
-    Downsamples a 3D NIfTI image by the given scale factor. NO UPSAMPLING
-    
-    Parameters:
-    img (nibabel NIfTI image): The input 3D NIfTI image to be LR.
-    scale_factor (int): The factor by which to downsample the image.
-    
-    Returns:
-    nibabel NIfTI image: The LR 3D NIfTI image.
-    """
-
-    img_data = img.get_fdata()
-    down_img = img_data[:, :, ::scale_factor]
-    
-    #update zooms
-    hdr = img.header.copy()
-    zooms = list(hdr.get_zooms())
-    zooms = (zooms[0], zooms[1], zooms[2] * scale_factor)
-    hdr.set_zooms(zooms)
-
-    lr_nifti = nib.Nifti1Image(down_img, img.affine, hdr)
-    return lr_nifti
-
-def create_LR_img_simple(img, scale_factor):
-    """
-    Downsamples a 3D image by the given scale factor. Interpolates to match original shape.
-    
-    Parameters:
-    img (numpy array): The input 3D image to be LR.
-    scale_factor (int): The factor by which to downsample the image.
-    
-    Returns:
-    numpy array: The LR 3D image.
-    """
-
-    down_img = img[:, :, ::scale_factor]
-
-    #upsample to original shape by filling in gaps
-    up_img = np.zeros(img.shape)
-    up_img[:, :, ::scale_factor] = down_img
-    for i in range(up_img.shape[2]-1):
-        if i % scale_factor != 0:
-            up_img[:, :, i] = (up_img[:, :, i - (i % scale_factor)] + up_img[:, :, i + (scale_factor - (i % scale_factor))]) / 2
-        
-
-    return up_img
-
-def create_and_save_LR_imgs(file_list, scale_factor, output_dir):
-    """
-    Creates and saves low-resolution (LR) images from a list of high-resolution (HR) image files.
-
-    Parameters:
-    - file_list: List of file paths to the HR images.
-    - scale_factor: The factor by which to downsample the images.
-    - output_dir: Directory where the LR images will be saved.
-    - base_name: Base name for the saved LR image files.
-    Returns:
-    list: List of file paths to the saved LR images.
-    """
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    saved_paths = []
-    for i, file_path in enumerate(file_list):
-        img = nib.load(file_path)
-        img_data = img.get_fdata()
-        lr_img = create_LR_img(img_data, scale_factor)
-        lr_img_nib = nib.Nifti1Image(lr_img, img.affine)
-        name = os.path.basename(file_path)
-        base_name = name.replace(".nii.gz", "_LR.nii.gz")
-        save_path = os.path.join(output_dir, base_name)
-        nib.save(lr_img_nib, save_path)
-        saved_paths.append(save_path)
-    return saved_paths
-
-def scale_to_reference_img(img, ref_img):
-    """
-    Resamples img to match the shape and affine of ref_img using nibabel. WRONG???
-    
-    Parameters:
-    ref_img (nibabel NIfTI image): The reference image with desired shape and affine.
-    img (nibabel NIfTI image): The image to be resampled.
-    
-    Returns:
-    nibabel NIfTI image: The resampled image.
-    """
-    
-    aligned_img = nib.processing.resample_from_to(img, ref_img)
-    return aligned_img
-
-
 def extract_3D_patches(img, patch_size, stride):
     """
     Extracts 3D patches from a 3D image.
@@ -177,7 +85,7 @@ def extract_3D_patches(img, patch_size, stride):
     stride (tuple): The stride for patch extraction (depth_stride, height_stride, width_stride).
     
     Returns:
-    list: A list of 3D patches.
+    list: A list of numpy 3D patches.
     """
     
     patches = []
@@ -253,52 +161,6 @@ def reconstruct_from_patches(patches, original_shape, stride):
     
     return reconstructed_img
 
-
-def get_patches_old(files, patch_size, stride, target_shape, ref_img):
-    """
-    Extracts patches from the given files.
-
-    Parameters:
-    - files: List of tuples containing file paths for T1, T2, and T2_LR images.
-    - patch_size: The size of each patch (depth, height, width).
-    - stride: The stride for patch extraction (depth_stride, height_stride, width_stride).
-    - target_shape: The target shape to which images will be padded.
-    - ref_img: The reference image for resampling.
-
-    Returns:
-    list: List of T1 input patches.
-    list: List of T2 output patches.
-    list: List of T2_LR input patches.
-
-    """
-    t1_input = []
-    t2_output = []
-    t2_LR_input = []
-    
-    for t1_file, t2_file, t2_LR_file in files:
-        #scaling to reference image
-        t1_img = scale_to_reference_img(nib.load(t1_file), ref_img)
-        t2_img = scale_to_reference_img(nib.load(t2_file), ref_img)
-        t2_LR_img = scale_to_reference_img(nib.load(t2_LR_file), ref_img)
-        #padding to be divisible by patch size
-        t1_img = pad_to_shape(t1_img, target_shape)
-        t2_img = pad_to_shape(t2_img, target_shape)
-        t2_LR_img = pad_to_shape(t2_LR_img, target_shape)
-        #normalizing
-        t1_img = normalize(t1_img)
-        t2_img = normalize(t2_img)
-        t2_LR_img = normalize(t2_LR_img)
-        #extracting patches
-        t1_patches = extract_3D_patches(t1_img.get_fdata(), patch_size, stride)
-        t2_patches = extract_3D_patches(t2_img.get_fdata(), patch_size, stride)
-        t2_LR_patches = extract_3D_patches(t2_LR_img.get_fdata(), patch_size, stride)
-        #add patches
-        t1_input.append(t1_patches)
-        t2_output.append(t2_patches)
-        t2_LR_input.append(t2_LR_patches)
-    
-    return t1_input, t2_output, t2_LR_input
-
 def get_patches(files, patch_size, stride, target_shape):
     """
     Extracts patches from the given files.
@@ -341,8 +203,49 @@ def get_patches(files, patch_size, stride, target_shape):
         t1_input.append(t1_patches)
         t2_output.append(t2_patches)
         t2_LR_input.append(t2_LR_patches)
+        print(t1_file, t2_file, t2_LR_file)
     
-    return t1_input, t2_output, t2_LR_input
+    affine = t1_img.affine
+
+    return t1_input, t2_output, t2_LR_input, affine
+
+def get_patches_from_triplet(triplet, patch_size, stride, target_shape):
+    """
+    Extracts patches from the given files.
+
+    Parameters:
+    - files: List of tuples containing file paths for T1, T2, and T2_LR images.
+    - patch_size: The size of each patch (depth, height, width).
+    - stride: The stride for patch extraction (depth_stride, height_stride, width_stride).
+    - target_shape: The target shape to which images will be padded.
+    - ref_img: The reference image for resampling.
+
+    Returns:
+    list: List of T1 input patches.
+    list: List of T2 output patches.
+    list: List of T2_LR input patches.
+
+    """
+    t1_file, t2_file, t2_LR_file = triplet
+
+    #load images
+    t1_img = nib.load(t1_file)
+    t2_img = nib.load(t2_file)
+    t2_LR_img = nib.load(t2_LR_file)
+    #padding to be divisible by patch size
+    t1_img = pad_to_shape(t1_img, target_shape)
+    t2_img = pad_to_shape(t2_img, target_shape)
+    t2_LR_img = pad_to_shape(t2_LR_img, target_shape)
+    #normalizing
+    t1_img = normalize(t1_img)
+    t2_img = normalize(t2_img)
+    t2_LR_img = normalize(t2_LR_img)
+    #extracting patches
+    t1_patches = extract_3D_patches(t1_img.get_fdata(), patch_size, stride)
+    t2_patches = extract_3D_patches(t2_img.get_fdata(), patch_size, stride)
+    t2_LR_patches = extract_3D_patches(t2_LR_img.get_fdata(), patch_size, stride)
+
+    return t1_patches, t2_patches, t2_LR_patches
 
 def get_patches_single_img(file, patch_size, stride, target_shape):
     """
@@ -367,33 +270,9 @@ def get_patches_single_img(file, patch_size, stride, target_shape):
     #extracting patches
     patches = extract_3D_patches(img.get_fdata(), patch_size, stride)
     #add patches
-    
-    return patches
+    affine = img.affine
 
-
-
-def min_max_normalize(img): # verkar inte göra skillnad vilken normalisering
-    """
-    Normalizes a numpy array to the range [0, 1] using min-max normalization.
-    
-    Parameters:
-    img (numpy array): The input image to be normalized.
-    
-    Returns:
-    numpy array: The normalized image.
-    """
-    # set all negative values to zero
-    img[img < 0] = 0
-
-
-    min_val = np.min(img)
-    max_val = np.max(img)
-    
-    if max_val - min_val == 0:
-        return img - min_val  # Return zero array if all values are the same
-    
-    normalized_img = (img - min_val) / (max_val - min_val)
-    return normalized_img
+    return patches, affine
 
 def normalize(img):
 
@@ -417,23 +296,6 @@ def normalize(img):
     normalized_img = np.clip(normalized_img, 0, 1)  # Clip values to [0, 1]
 
     return nib.Nifti1Image(normalized_img, affine=img.affine)
-
-def apply_FLIRT(img_path, ref_img_path, out_path):
-    """
-    Applies FLIRT affine registration to align img to ref_img.
-
-    Parameters:
-    - img: The input image to be registered.
-    - ref_img: The reference image to which img will be aligned.
-
-    Returns:
-    - The registered image.
-    """
-    flirt = fsl.FLIRT()
-    flirt.inputs.in_file = str(img_path)
-    flirt.inputs.reference = str(ref_img_path)
-    flirt.inputs.out_file = str(out_path)
-    res = flirt.run()
 
 def calculate_metrics(real_images, generated_images):
     """

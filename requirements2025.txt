@@ -26,6 +26,7 @@ cycler==0.12.1
 debugpy==1.8.16
 decorator==5.2.1
 defusedxml==0.7.1
+degrade @ git+https://gitlab.com/iacl/degrade@c2755a7df4783c85ab676016301cada47131f183
 etelemetry==0.3.1
 exceptiongroup==1.3.0
 executing==2.2.1
@@ -126,6 +127,7 @@ pyzmq==27.1.0
 rdflib==7.3.0
 referencing==0.36.2
 requests==2.32.5
+resize @ git+https://gitlab.com/iacl/resize@7edd72d4a14d0b650e90313ab63f9d690a189ced
 rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rfc3987-syntax==1.1.0
@@ -137,6 +139,7 @@ sigpy==0.1.27
 simpleitk==2.5.3
 simplejson==3.20.2
 six==1.17.0
+smore @ git+https://gitlab.com/iacl/smore@f509e0da58237397e5e35af1d92b42f26eb06d2c
 sniffio==1.3.1
 soupsieve==2.8
 stack-data==0.6.3

@@ -9,9 +9,8 @@ import torch.optim as optim
 from generative.networks.nets import PatchDiscriminator
 from generative.losses import PatchAdversarialLoss
 from dataset import TrainDataset
-from functions import split_dataset, get_patches
+from functions import *
 import datetime
-from file_structure import append_row
 print("Start at:", datetime.datetime.now().isoformat())
 # Parameters
 batch_size = 2

@@ -1,32 +1,26 @@
-# MRI Super-Resolution Project
+# BABY-AI local repo
 
-This repository contains code and notebooks for MRI super-resolution experiments using PyTorch and nibabel.
+introduction to the project 
 
 ## Structure
-- `preprocessing.py`: Dataset and preprocessing utilities
-- `pytorch-tutorial.ipynb`: Main notebook for experiments
-- `test-lab.ipynb`: Additional tests and experiments
+- `functions.py`: all functions
+explanation of whats in the different files
 
-## Getting Started
+## Installation
 1. Clone the repo or copy your files here.
 2. Set up a Python environment (e.g., with venv or conda).
-3. Install dependencies:
-   ```bash
-   pip install torch torchvision nibabel matplotlib pandas tqdm scikit-image
-   ```
-4. Place your MRI data in the appropriate folders as referenced in the code.
+3. Install requirements.txt
+...
 
 ## Usage
-- Run the notebooks for interactive exploration.
-- Use `preprocessing.py` for dataset loading and patch extraction.
+1. Simple LR-HR reconstruction for a single anisotropic MRI
+2. Compute metrics for reconstructed image
 
-## Version Control
-- Track your changes with Git.
-- Add and commit files as you work:
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   ```
+## Data Preparations
+- Ensure all images has size (182, 218, 182) and are rigidly registered to filename_t1
+- Use ... to extract patches from MRI
+
+## 
 
 ## License
-Specify your license here.
+license?
