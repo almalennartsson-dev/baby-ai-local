@@ -8,21 +8,47 @@ import pandas as pd
 from torchvision.io import decode_image
 import nibabel as nib
 import matplotlib.pyplot as plt
+from functions import *
 
-
+#want to input list of triplets of file paths
 class TrainDataset(Dataset):
-    def __init__(self, input1, input2, output): 
-        self.input1 = [patch for img_patches in input1 for patch in img_patches]
-        self.input2 = [patch for img_patches in input2 for patch in img_patches]
-        self.output = [patch for img_patches in output for patch in img_patches]
+    def __init__(self, triplets, patch_size, stride, target_shape): 
+        self.triplets = triplets
+        self.patch_size = patch_size
+        self.stride = stride
+        self.target_shape = target_shape
+
+        px = (self.target_shape[0] - self.patch_size[0]) // self.stride[0] + 1
+        py = (self.target_shape[1] - self.patch_size[1]) // self.stride[1] + 1
+        pz = (self.target_shape[2] - self.patch_size[2]) // self.stride[2] + 1
+        self.patches_per_image = px * py * pz
+
+        #cache patches for all images to speed up training
+        self._cache_img_idx = None
+        self._cache_patches = None
+
 
     def __len__(self):
-        return len(self.output)
+        #total number of samples = images x patches per image
+        return len(self.triplets) * self.patches_per_image
 
     def __getitem__(self, idx):
-        input1 = self.input1[idx]
-        input2 = self.input2[idx]
-        output = self.output[idx]
+
+        #determine which image and which patch
+        img_idx = idx // self.patches_per_image
+        patch_idx = idx % self.patches_per_image
+
+        # compute patches only when we move to a new image
+        if self._cache_img_idx != img_idx:
+
+            self._cache_patches = get_patches_from_triplet(self.triplets[img_idx], self.patch_size, self.stride, self.target_shape)
+            self._cache_img_idx = img_idx
+
+        t1_patches, t2_patches, t2lr_patches = self._cache_patches
+
+        input1 = t1_patches[patch_idx]
+        input2 = t2lr_patches[patch_idx]
+        output = t2_patches[patch_idx]
 
         input1 = torch.from_numpy(input1).float()
         input2 = torch.from_numpy(input2).float()

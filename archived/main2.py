@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from dataset import TrainDataset, EarlyStopping
+from archived.datasetold import TrainDataset, EarlyStopping
 from functions import create_and_save_LR_imgs, reconstruct_from_patches, split_dataset, get_patches
 from file_structure import append_row
 import datetime

@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from generative.networks.nets import PatchDiscriminator
 from generative.losses import PatchAdversarialLoss
-from dataset import TrainDataset
+from archived.datasetold import TrainDataset
 from functions import *
 import datetime
 print("Start at:", datetime.datetime.now().isoformat())
