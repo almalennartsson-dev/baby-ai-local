@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from dataset import TrainDataset
-from functions import *
+from scripts.dataset import TrainDataset
+from scripts.functions import *
 import datetime
 import random
 from torch.utils.tensorboard import SummaryWriter 

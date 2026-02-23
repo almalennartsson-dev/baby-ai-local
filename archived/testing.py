@@ -1,6 +1,6 @@
 #TEST ONE IMAGE
 import pathlib as p
-from functions import *
+from scripts.functions import *
 import nibabel as nib
 import numpy as np
 import random

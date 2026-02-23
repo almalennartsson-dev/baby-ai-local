@@ -9,7 +9,7 @@ import torch.optim as optim
 from generative.networks.nets import PatchDiscriminator
 from generative.losses import PatchAdversarialLoss
 from archived.datasetold import TrainDataset
-from functions import *
+from scripts.functions import *
 import datetime
 print("Start at:", datetime.datetime.now().isoformat())
 # Parameters
