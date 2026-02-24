@@ -8,7 +8,7 @@ import pandas as pd
 from torchvision.io import decode_image
 import nibabel as nib
 import matplotlib.pyplot as plt
-from scripts.functions import *
+from functions import *
 
 #want to input list of triplets of file paths
 class TrainDataset(Dataset):

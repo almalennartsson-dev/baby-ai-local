@@ -13,7 +13,8 @@ patch_size = (32, 32, 32)
 stride = (16, 16, 16)
 target_shape = (192, 224, 192)
 
-DATA_DIR = p.Path.home()/"data" # path to folder with data
+DATA_DIR = ...# path to folder with data
+REPO_ROOT = ...# path to this repo
 
 model_weights = hf_hub_download(repo_id="almalennartsson/baby-ai", filename="2026-02-15T11:23:48.627180_model_weights.pth") #load model weights from huggingface
 
@@ -30,11 +31,11 @@ net.load_state_dict(torch.load(model_weights, map_location="cpu"))
 
 #LOAD DATA
 
-# Path to input images
+# Path to input images - ENSURE CORRECT LOADING OF DATA!
 t1_files = sorted(DATA_DIR.rglob("*T1w.nii.gz")) # isotropic t1w images
 t2_lr_files = sorted(DATA_DIR.rglob("*T2w.nii.gz")) # anisotropic t2w images
 
-# reassure correct shape and voxel size
+# check shape and voxel size
 for i in range(len(t1_files)):
     assert nib.load(t1_files[i]).shape == nib.load(t2_lr_files[i]).shape == (182,218,182)
     assert nib.load(t1_files[i]).header.get_zooms() == nib.load(t2_lr_files[i]).header.get_zooms() == (1.0,1.0,1.0)
@@ -54,4 +55,4 @@ for i in range(len(t1_files)):
             output = net(inputs)
             all_outputs.append(output.squeeze(0).squeeze(0).cpu().numpy()) 
         t2_reconstructed = reconstruct_from_patches(all_outputs, target_shape, stride)
-    nib.save(nib.Nifti1Image(t2_reconstructed, affine), p.path.cwd()/"results"/t2_lr_files[i].name.replace("T2w","T2w_reconstructed")) #save output image in results folder
+    nib.save(nib.Nifti1Image(t2_reconstructed, affine), REPO_ROOT/"results"/t2_lr_files[i].name.replace("T2w","T2w_reconstructed")) #save output image in results folder

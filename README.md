@@ -43,7 +43,7 @@ project/
 ```
 
 ## Files
-All files are available via Huggingface and automatically loads in the scripts
+All files are available via Huggingface hub and automatically loads in the scripts
 
 ## Installation
 
