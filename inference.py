@@ -1,6 +1,6 @@
 #IMPORTS
 
-from scripts.functions import *
+from .functions import *
 import nibabel as nib
 from monai.networks.nets import UNet
 import torch
@@ -12,7 +12,6 @@ from huggingface_hub import hf_hub_download
 patch_size = (32, 32, 32)
 stride = (16, 16, 16)
 target_shape = (192, 224, 192)
-
 DATA_DIR = ...# path to folder with data
 REPO_ROOT = ...# path to this repo
 

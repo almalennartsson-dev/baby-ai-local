@@ -41,7 +41,7 @@ class TrainDataset(Dataset):
         # compute patches only when we move to a new image
         if self._cache_img_idx != img_idx:
 
-            self._cache_patches = get_patches_from_triplet(self.triplets[img_idx], self.patch_size, self.stride, self.target_shape)
+            self._cache_patches = get_patches(self.triplets[img_idx], self.patch_size, self.stride, self.target_shape)
             self._cache_img_idx = img_idx
 
         t1_patches, t2_patches, t2lr_patches = self._cache_patches

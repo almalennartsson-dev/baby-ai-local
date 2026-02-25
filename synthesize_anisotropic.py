@@ -5,7 +5,7 @@ import nibabel as nib
 # This setup creates anisotropic images with slice thickness 2, 3, 4, 5 mm in all directions (axial, sagittal, coronal) from the isotropic ground truth images in the data directory.
 
 #LOAD ISOTROPIC GROUND TRUTH IMAGES
-DATA_DIR = p.Path.home()/"data"/"bobsrepository" #path to folder with data
+DATA_DIR = ... #path to folder with data
 isotropic_images = sorted(DATA_DIR.rglob("*T2w.nii.gz")) # collect all isotropic t2w images in the data directory
 
 #CREATE ANISOTROPIC IMAGES

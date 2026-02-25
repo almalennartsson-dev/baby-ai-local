@@ -19,13 +19,6 @@ import SimpleITK as sitk
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio, mean_squared_error, normalized_root_mse
 from scipy import stats
 
-
-
-import os, shutil
-os.environ["FSLDIR"] = os.path.expanduser("~/fsl")
-os.environ["FSLOUTPUTTYPE"] = "NIFTI_GZ"
-os.environ["PATH"] = os.path.join(os.environ["FSLDIR"], "bin") + os.pathsep + os.environ.get("PATH","")
-
 def split_dataset(file_list, train_ratio=(0.7, 0.15, 0.15)):
     """
     Splits the dataset into training and validation sets based on the given ratio.
@@ -160,8 +153,7 @@ def reconstruct_from_patches(patches, original_shape, stride):
     reconstructed_img /= count_img
     
     return reconstructed_img
-
-def get_patches(files, patch_size, stride, target_shape):
+def get_patches_old(files, patch_size, stride, target_shape):
     """
     Extracts patches from the given files.
 
@@ -209,16 +201,15 @@ def get_patches(files, patch_size, stride, target_shape):
 
     return t1_input, t2_output, t2_LR_input, affine
 
-def get_patches_from_triplet(triplet, patch_size, stride, target_shape):
+def get_patches(triplet, patch_size, stride, target_shape):
     """
     Extracts patches from the given files.
 
     Parameters:
-    - files: List of tuples containing file paths for T1, T2, and T2_LR images.
+    - triplet: A tuple containing file paths for T1, T2, and T2_LR images.
     - patch_size: The size of each patch (depth, height, width).
     - stride: The stride for patch extraction (depth_stride, height_stride, width_stride).
     - target_shape: The target shape to which images will be padded.
-    - ref_img: The reference image for resampling.
 
     Returns:
     list: List of T1 input patches.

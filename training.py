@@ -16,8 +16,6 @@ print("script starting...")
 patch_size = (32, 32, 32)
 stride = (16, 16, 16)
 target_shape = (192, 224, 192)
-augmentations_bob = [2,3,4,5]
-augmentation_bob_dir = "all_directions" 
 
 spatial_dims=3
 in_channels=2
@@ -30,105 +28,28 @@ norm=None
 loss_fn = nn.MSELoss()
 batch_size = 32
 num_epochs = 100
-note = "Session 2: CHOP data included"
+note = "Session 1"
 timestamp = datetime.datetime.now().isoformat()
 
 print(note)
 print("Start at:", timestamp)
 
-DATA_DIR = pathlib.Path.home()/"bobsrepository" #adjust this!
+DATA_DIR = ... #path to folder with data
+REPO_ROOT = ... #path to this repo                                                   
 print(f"Data directory: {DATA_DIR}")
 
-writer = SummaryWriter(log_dir= DATA_DIR / "tensorboard_logs" / timestamp)
+(REPO_ROOT / "results" / "tensorboard_logs").mkdir(parents=True, exist_ok=True)
+writer = SummaryWriter(log_dir= REPO_ROOT / "results" / "tensorboard_logs" / timestamp)
 
-AX_DIR = DATA_DIR / "LR_data" / "axial" / "even"
-CO_DIR = DATA_DIR / "LR_data" / "coronal" / "even"
-SA_DIR = DATA_DIR / "LR_data" / "sagittal" / "even"
+#load file paths to lists - ENSURE CORRECT LOADING OF DATA!
+t1_files = sorted(DATA_DIR.rglob("*T1w.nii.gz")) # isotropic t1w images
+t2_files = sorted(DATA_DIR.rglob("*T2w.nii.gz")) # isotropic t2w images (ground truth)
+t2_lr_files = sorted(DATA_DIR.rglob("*T2w_LR.nii.gz")) #anisotropic t2w images
 
-assert AX_DIR.exists(), f"AX_DIR not found: {AX_DIR}"
-assert CO_DIR.exists(), f"CO_DIR not found: {CO_DIR}"
-assert SA_DIR.exists(), f"SA_DIR not found: {SA_DIR}"
+print(f"T1 files: {len(t1_files)}, T2 files: {len(t2_files)}, T2 LR files: {len(t2_lr_files)}")
 
-#load GT files
-t1_files = sorted(DATA_DIR.rglob("*T1w.nii.gz"))
-t2_files = sorted(DATA_DIR.rglob("*T2w.nii.gz"))
-
-print(f"T1 files: {len(t1_files)}, T2 files: {len(t2_files)}")
-
-#LOAD CHOP FILES - adjust this!!!
-t1_chop_files = sorted(DATA_DIR.rglob("*T1w_CHOP.nii.gz"))
-t2_chop_files = sorted(DATA_DIR.rglob("*T2w_CHOP.nii.gz"))
-t2_ls_chop_files = sorted(DATA_DIR.rglob("*T2w_LR_CHOP.nii.gz"))
-print(f"CHOP T1 files: {len(t1_chop_files)}, CHOP T2 files: {len(t2_chop_files)}, CHOP T2 LS files: {len(t2_ls_chop_files)}")
-chop_files = list(zip(t1_chop_files, t2_chop_files, t2_ls_chop_files))
-train_chop, val_chop, test_chop = split_dataset(chop_files)
-print(f"CHOP Train size: {len(train_chop)}, CHOP Val size: {len(val_chop)}, CHOP Test size: {len(test_chop)}")
-
-#AXIAL
-#load all files
-t2_ax_LR2_files = sorted(AX_DIR.rglob("*T2w_LR.nii.gz"))
-t2_ax_LR3_files = sorted(AX_DIR.rglob("*T2w_LR3.nii.gz"))
-t2_ax_LR4_files = sorted(AX_DIR.rglob("*T2w_LR4.nii.gz"))
-t2_ax_LR5_files = sorted(AX_DIR.rglob("*T2w_LR5.nii.gz"))
-print(f"Axial LR2 files: {len(t2_ax_LR2_files)}, LR3 files: {len(t2_ax_LR3_files)}, LR4 files: {len(t2_ax_LR4_files)}, LR5 files: {len(t2_ax_LR5_files)}")
-#combine all LR files
-files_ax_LR2 = list(zip(t1_files, t2_files, t2_ax_LR2_files))
-files_ax_LR3 = list(zip(t1_files, t2_files, t2_ax_LR3_files))
-files_ax_LR4 = list(zip(t1_files, t2_files, t2_ax_LR4_files))
-files_ax_LR5 = list(zip(t1_files, t2_files, t2_ax_LR5_files))
-#split datasets
-train_ax_LR2, val_ax_LR2, test_ax_LR2 = split_dataset(files_ax_LR2)
-train_ax_LR3, val_ax_LR3, test_ax_LR3 = split_dataset(files_ax_LR3)
-train_ax_LR4, val_ax_LR4, test_ax_LR4 = split_dataset(files_ax_LR4)
-train_ax_LR5, val_ax_LR5, test_ax_LR5 = split_dataset(files_ax_LR5)
-
-#CORONAL
-#load all files
-t2_co_LR2_files = sorted(CO_DIR.rglob("*T2w_LR2.nii.gz"))
-t2_co_LR3_files = sorted(CO_DIR.rglob("*T2w_LR3.nii.gz"))
-t2_co_LR4_files = sorted(CO_DIR.rglob("*T2w_LR4.nii.gz"))
-t2_co_LR5_files = sorted(CO_DIR.rglob("*T2w_LR5.nii.gz"))
-print(f"Coronal LR2 files: {len(t2_co_LR2_files)}, LR3 files: {len(t2_co_LR3_files)}, LR4 files: {len(t2_co_LR4_files)}, LR5 files: {len(t2_co_LR5_files)}")
-#combine all LR files
-files_co_LR2 = list(zip(t1_files, t2_files, t2_co_LR2_files))
-files_co_LR3 = list(zip(t1_files, t2_files, t2_co_LR3_files))
-files_co_LR4 = list(zip(t1_files, t2_files, t2_co_LR4_files))
-files_co_LR5 = list(zip(t1_files, t2_files, t2_co_LR5_files))
-#split datasets
-train_co_LR2, val_co_LR2, test_co_LR2 = split_dataset(files_co_LR2)
-train_co_LR3, val_co_LR3, test_co_LR3 = split_dataset(files_co_LR3)
-train_co_LR4, val_co_LR4, test_co_LR4 = split_dataset(files_co_LR4)
-train_co_LR5, val_co_LR5, test_co_LR5 = split_dataset(files_co_LR5)
-
-#SAGITTAL
-#load all files
-t2_sa_LR2_files = sorted(SA_DIR.rglob("*T2w_LR2.nii.gz"))
-t2_sa_LR3_files = sorted(SA_DIR.rglob("*T2w_LR3.nii.gz"))
-t2_sa_LR4_files = sorted(SA_DIR.rglob("*T2w_LR4.nii.gz"))
-t2_sa_LR5_files = sorted(SA_DIR.rglob("*T2w_LR5.nii.gz"))
-print(f"Sagittal LR2 files: {len(t2_sa_LR2_files)}, LR3 files: {len(t2_sa_LR3_files)}, LR4 files: {len(t2_sa_LR4_files)}, LR5 files: {len(t2_sa_LR5_files)}")
-#combine all LR files
-files_sa_LR2 = list(zip(t1_files, t2_files, t2_sa_LR2_files))
-files_sa_LR3 = list(zip(t1_files, t2_files, t2_sa_LR3_files))
-files_sa_LR4 = list(zip(t1_files, t2_files, t2_sa_LR4_files))
-files_sa_LR5 = list(zip(t1_files, t2_files, t2_sa_LR5_files))
-#split datasets
-train_sa_LR2, val_sa_LR2, test_sa_LR2 = split_dataset(files_sa_LR2)
-train_sa_LR3, val_sa_LR3, test_sa_LR3 = split_dataset(files_sa_LR3)
-train_sa_LR4, val_sa_LR4, test_sa_LR4 = split_dataset(files_sa_LR4) 
-train_sa_LR5, val_sa_LR5, test_sa_LR5 = split_dataset(files_sa_LR5)
-
-
-#COMBINE ALL ORIENTATIONS
-train = train_ax_LR2 + train_ax_LR3 + train_ax_LR4 + train_ax_LR5 + \
-        train_co_LR2 + train_co_LR3 + train_co_LR4 + train_co_LR5 + \
-        train_sa_LR2 + train_sa_LR3 + train_sa_LR4 + train_sa_LR5 + train_chop
-val = val_ax_LR2 + val_ax_LR3 + val_ax_LR4 + val_ax_LR5 +  \
-      val_co_LR2 + val_co_LR3 + val_co_LR4 + val_co_LR5 +  \
-      val_sa_LR2 + val_sa_LR3 + val_sa_LR4 + val_sa_LR5 + val_chop
-test = test_ax_LR2 + test_ax_LR3 + test_ax_LR4 + test_ax_LR5 + \
-       test_co_LR2 + test_co_LR3 + test_co_LR4 + test_co_LR5 + \
-       test_sa_LR2 + test_sa_LR3 + test_sa_LR4 + test_sa_LR5 + test_chop
+files = list(zip(t1_files, t2_files, t2_lr_files)) # list of triplets of file paths
+train, val, test = split_dataset(files) # split into train, val and test sets, default split is 70% train, 15% val, 15% test
 
 #SHUFFLE DATA
 random.shuffle(train)
@@ -185,7 +106,6 @@ for epoch in range(num_epochs):
         optimizer.step()
         
         train_loss += loss.item() * inputs.size(0)
-        
 
     #VALIDATION
     net.eval()
@@ -211,7 +131,8 @@ for epoch in range(num_epochs):
     #save the best model based on validation loss
     if epoch_val_loss < best_val_loss:
         best_val_loss = epoch_val_loss
-        torch.save(net.state_dict(), DATA_DIR / "outputs" / f"{timestamp}_model_weights.pth")
+        (REPO_ROOT / "results" / "weights").mkdir(parents=True, exist_ok=True)
+        torch.save(net.state_dict(), REPO_ROOT / "results" / "weights" / f"{timestamp}_model_weights.pth")
         best_epoch = epoch + 1 # Store the best epoch number
         writer.add_text('Best Model', f'New best model saved at epoch {best_epoch} with val loss {best_val_loss:.4f}', best_epoch)
 
@@ -228,8 +149,6 @@ row_dict = {
     "train_size": len(train),
     "val_size": len(val),
     "test_size": len(test),
-    "anisotropic direction": augmentation_bob_dir,
-    "augmentations": str(augmentations_bob),
     "patch_size": patch_size,
     "stride": stride,
     "target_shape": target_shape,
@@ -253,7 +172,6 @@ row_dict = {
 }
 
 #create outputs directory if it doesn't exist
-(DATA_DIR / "outputs").mkdir(parents=True, exist_ok=True)
-append_row(DATA_DIR / "outputs" / "training_info.csv", row_dict)
+append_row(REPO_ROOT / "results" / "training_info.csv", row_dict)
 print("End at:", datetime.datetime.now().isoformat())
 writer.close()
