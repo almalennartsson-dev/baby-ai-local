@@ -1,14 +1,6 @@
 import torch
-from torch import nn
-from torch.utils.data import DataLoader, Dataset
-from torchvision import datasets
-from torchvision.transforms import ToTensor
-import os
-import pandas as pd
-from torchvision.io import decode_image
-import nibabel as nib
-import matplotlib.pyplot as plt
-from functions import *
+from torch.utils.data import Dataset
+from func.functions import *
 
 #want to input list of triplets of file paths
 class TrainDataset(Dataset):

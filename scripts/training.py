@@ -1,11 +1,10 @@
-import pathlib
 from monai.networks.nets import UNet
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from dataset import TrainDataset
-from functions import *
+from func.dataset import TrainDataset
+from func.functions import *
 import datetime
 import random
 from torch.utils.tensorboard import SummaryWriter 

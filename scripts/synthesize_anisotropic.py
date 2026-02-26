@@ -1,5 +1,4 @@
-from functions import *
-import pathlib as p
+from func.functions import *
 import nibabel as nib
 
 # This setup creates anisotropic images with slice thickness 2, 3, 4, 5 mm in all directions (axial, sagittal, coronal) from the isotropic ground truth images in the data directory.
@@ -12,7 +11,7 @@ isotropic_images = sorted(DATA_DIR.rglob("*T2w.nii.gz")) # collect all isotropic
 scale_factors = [2, 3, 4, 5] # slice thickness in mm
 start_slice = 0 # which slices to remove, 0 means even slices are removed, 1 means odd slices are removed
 directions = ['axial', 'sagittal', 'coronal'] # directions can be 'axial', 'sagittal' or 'coronal' depending on which plane you want to remove slices from
-LR_DIR = DATA_DIR/"LR_data"
+LR_DIR = DATA_DIR/"LR_dataaaa"
 
 for i in range(len(isotropic_images)):
     for scale_factor in scale_factors:

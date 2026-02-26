@@ -1,10 +1,9 @@
 #IMPORTS
 
-from .functions import *
+from func.functions import *
 import nibabel as nib
 from monai.networks.nets import UNet
 import torch
-import pathlib as p
 from huggingface_hub import hf_hub_download
 
 # SPECIFY PARAMETERS
@@ -14,8 +13,7 @@ stride = (16, 16, 16)
 target_shape = (192, 224, 192)
 DATA_DIR = ...# path to folder with data
 REPO_ROOT = ...# path to this repo
-
-model_weights = hf_hub_download(repo_id="almalennartsson/baby-ai", filename="2026-02-15T11:23:48.627180_model_weights.pth") #load model weights from huggingface
+model_weights = hf_hub_download(repo_id="almalennartsson/baby-ai", filename="pretrained_weights.pth") #load model weights from huggingface
 
 net = UNet(
     spatial_dims=3,

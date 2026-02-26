@@ -1,23 +1,9 @@
-from matplotlib import patches
 import numpy as np
-import torch
-from torch import nn
-from torch.utils.data import DataLoader, Dataset
-from torchvision import datasets
-from torchvision.transforms import ToTensor
 import os
 import pandas as pd
-from torchvision.io import decode_image
 import nibabel as nib
-from nibabel import processing
-import matplotlib.pyplot as plt
-import scipy.ndimage
 from scipy.ndimage import zoom
-from skimage.transform import resize
-import nipype.interfaces.fsl as fsl
-import SimpleITK as sitk
 from skimage.metrics import structural_similarity, peak_signal_noise_ratio, mean_squared_error, normalized_root_mse
-from scipy import stats
 
 def split_dataset(file_list, train_ratio=(0.7, 0.15, 0.15)):
     """
