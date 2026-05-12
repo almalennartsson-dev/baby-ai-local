@@ -2,7 +2,7 @@
 
 This repo contains the code to reconstruct anisotropic T2w infant brain MRI to isotropic. The repository can either be used to perform direct inference with a pretrained model, or to perform training on a new dataset. The project was initially conducted as a Master's Thesis at the Mathematical Faculty at Lund University by Alma Lennartsson.
 
-Master's thesis available at: [Anisotropic to Isotropic Reconstruction of Infant Brain MRI with Deep Learning](link to lup). 
+Master's thesis available at: [Anisotropic to Isotropic Reconstruction of Infant Brain MRI with Deep Learning](http://lup.lub.lu.se/student-papers/record/9222513). 
 
 ### Acknowledgements
 
